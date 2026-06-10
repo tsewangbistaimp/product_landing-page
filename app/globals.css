@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: #fbfdf9;
+  color: #17221c;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+.product-shell {
+  background:
+    radial-gradient(circle at 8% 12%, rgba(232, 111, 69, 0.12), transparent 28%),
+    radial-gradient(circle at 88% 5%, rgba(23, 86, 51, 0.12), transparent 22%),
+    linear-gradient(180deg, #fbfdf9 0%, #eef7f1 100%);
+}
