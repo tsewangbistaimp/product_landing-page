@@ -51,15 +51,17 @@ async function ensureSheetReady(sheets, spreadsheetId, sheetName) {
   }
 
   const headerRange = `${sheetName}!A1:J1`;
+  const expectedHeader = ["Submitted At", "Full Name", "Phone", "Email", "Location", "Product", "Quantity", "Price Per Piece", "Total Transaction", "Payment Method"];
   const header = await sheets.spreadsheets.values.get({ spreadsheetId, range: headerRange });
+  const currentHeader = header.data.values?.[0] || [];
 
-  if (!header.data.values?.length) {
+  if (!header.data.values?.length || currentHeader[8] !== "Total Transaction") {
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: headerRange,
       valueInputOption: "USER_ENTERED",
       requestBody: {
-        values: [["Submitted At", "Full Name", "Phone", "Email", "Location", "Product", "Quantity", "Price Per Piece", "Total Price", "Payment Method"]]
+        values: [expectedHeader]
       }
     });
   }

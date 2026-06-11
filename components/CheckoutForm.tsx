@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Loader2, Minus, Plus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useMemo, useState } from "react";
 import { formatMoney, product } from "@/lib/product";
@@ -10,15 +10,24 @@ function CheckoutFormInner() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const initialQuantity = useMemo(() => {
+    const requestedQuantity = Number(params.get("quantity") || 1);
+    return Math.min(product.maxQuantity, Math.max(1, Number.isFinite(requestedQuantity) ? requestedQuantity : 1));
+  }, [params]);
+  const [quantity, setQuantity] = useState(initialQuantity);
   const order = useMemo(() => {
-    const quantity = Math.max(1, Number(params.get("quantity") || 1));
     return {
       productName: params.get("product") || product.name,
       quantity,
-      pricePerPiece: Number(params.get("price") || product.offerPrice),
-      totalPrice: Number(params.get("total") || quantity * product.offerPrice)
+      pricePerPiece: product.offerPrice,
+      totalPrice: quantity * product.offerPrice + product.deliveryFee
     };
-  }, [params]);
+  }, [params, quantity]);
+
+  function updateQuantity(value: number) {
+    if (!Number.isFinite(value)) return;
+    setQuantity(Math.min(product.maxQuantity, Math.max(1, Math.floor(value))));
+  }
 
   async function submitOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,11 +59,23 @@ function CheckoutFormInner() {
       <input name="phone" required placeholder="Phone Number" className="rounded-md border border-brand-green/20 px-4 py-3 outline-none focus:border-brand-green" />
       <input name="email" type="email" required placeholder="Email Address" className="rounded-md border border-brand-green/20 px-4 py-3 outline-none focus:border-brand-green" />
       <textarea name="location" required placeholder="Kindly share your exact location" className="min-h-28 rounded-md border border-brand-green/20 px-4 py-3 outline-none focus:border-brand-green" />
+      <label className="grid gap-2 text-sm font-semibold text-brand-ink">
+        Quantity
+        <div className="flex w-fit overflow-hidden rounded-md border border-brand-green/20 bg-white">
+          <button type="button" onClick={() => updateQuantity(quantity - 1)} aria-label="Decrease quantity" className="grid h-12 w-12 place-items-center text-brand-green hover:bg-brand-mint">
+            <Minus className="h-4 w-4" />
+          </button>
+          <input value={quantity} onChange={(event) => updateQuantity(Number(event.target.value))} inputMode="numeric" className="h-12 w-24 border-x border-brand-green/10 text-center font-bold outline-none" />
+          <button type="button" onClick={() => updateQuantity(quantity + 1)} aria-label="Increase quantity" className="grid h-12 w-12 place-items-center text-brand-green hover:bg-brand-mint">
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+      </label>
       <div className="grid gap-4 rounded-lg bg-brand-mint p-5 sm:grid-cols-2">
         <Summary label="Product Name" value={order.productName} />
         <Summary label="Quantity" value={String(order.quantity)} />
         <Summary label="Price Per Piece" value={formatMoney(order.pricePerPiece)} />
-        <Summary label="Total Price" value={formatMoney(order.totalPrice)} />
+        <Summary label="Total Transaction" value={formatMoney(order.totalPrice)} />
       </div>
       {error ? <p className="rounded-md bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p> : null}
       <button disabled={isSubmitting} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-brand-green px-6 py-3 text-sm font-semibold text-white disabled:opacity-70">

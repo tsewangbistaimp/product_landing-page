@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { orderSchema, saveOrderToGoogleSheet, sendOrderEmails } from "@/lib/order";
 import { product } from "@/lib/product";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   try {
     const order = orderSchema.parse(await request.json());

@@ -9,7 +9,7 @@ export const orderSchema = z.object({
   email: z.string().email(),
   location: z.string().min(5),
   productName: z.string().min(1),
-  quantity: z.coerce.number().int().min(1).max(10),
+  quantity: z.coerce.number().int().min(1).max(product.maxQuantity),
   pricePerPiece: z.coerce.number().positive(),
   totalPrice: z.coerce.number().positive()
 });
@@ -17,9 +17,23 @@ export const orderSchema = z.object({
 export type OrderPayload = z.infer<typeof orderSchema>;
 
 function requireEnv(name: string) {
-  const value = process.env[name];
+  const value = cleanEnv(process.env[name]);
   if (!value) throw new Error(`${name} is missing`);
   return value;
+}
+
+function cleanEnv(value: string | undefined) {
+  if (!value) return "";
+
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+
+  return trimmed;
 }
 
 function normalizedPrivateKey() {
@@ -59,15 +73,17 @@ async function ensureSheetReady(sheets: ReturnType<typeof google.sheets>, spread
   }
 
   const headerRange = `${sheetName}!A1:J1`;
+  const expectedHeader = ["Submitted At", "Full Name", "Phone", "Email", "Location", "Product", "Quantity", "Price Per Piece", "Total Transaction", "Payment Method"];
   const header = await sheets.spreadsheets.values.get({ spreadsheetId, range: headerRange });
+  const currentHeader = header.data.values?.[0] || [];
 
-  if (!header.data.values?.length) {
+  if (!header.data.values?.length || currentHeader[8] !== "Total Transaction") {
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: headerRange,
       valueInputOption: "USER_ENTERED",
       requestBody: {
-        values: [["Submitted At", "Full Name", "Phone", "Email", "Location", "Product", "Quantity", "Price Per Piece", "Total Price", "Payment Method"]]
+        values: [expectedHeader]
       }
     });
   }
@@ -95,15 +111,15 @@ export async function sendOrderEmails(order: OrderPayload) {
   const transport = nodemailer.createTransport({
     host: requireEnv("SMTP_HOST"),
     port: Number(requireEnv("SMTP_PORT")),
-    secure: process.env.SMTP_SECURE === "true",
+    secure: cleanEnv(process.env.SMTP_SECURE) === "true",
     auth: {
       user: requireEnv("SMTP_USER"),
-      pass: requireEnv("SMTP_PASS")
+      pass: requireEnv("SMTP_PASS").replace(/\s/g, "")
     }
   });
-  const from = process.env.CUSTOMER_EMAIL_FROM || requireEnv("SMTP_USER");
-  const replyTo = process.env.CUSTOMER_REPLY_TO || requireEnv("SMTP_USER");
-  const notificationEmail = process.env.ORDER_NOTIFICATION_EMAIL || requireEnv("SMTP_USER");
+  const from = cleanEnv(process.env.CUSTOMER_EMAIL_FROM) || requireEnv("SMTP_USER");
+  const replyTo = cleanEnv(process.env.CUSTOMER_REPLY_TO) || requireEnv("SMTP_USER");
+  const notificationEmail = cleanEnv(process.env.ORDER_NOTIFICATION_EMAIL) || requireEnv("SMTP_USER");
 
   await Promise.all([
     transport.sendMail({

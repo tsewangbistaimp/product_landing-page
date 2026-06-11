@@ -6,6 +6,7 @@ export const product = {
   regularPrice: 5000,
   offerPrice: 3900,
   deliveryFee: 0,
+  maxQuantity: 99,
   currency: "Rs.",
   images: ["/products/shoe-1.png", "/products/shoe-2.png", "/products/shoe-3.png", "/products/shoe-4.png"],
   benefits: ["Comfortable fit", "Durable quality", "Lightweight design", "Stylish look", "Suitable for daily wear"],

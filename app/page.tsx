@@ -2,6 +2,7 @@ import Image from "next/image";
 import { CheckCircle2, Headphones, PackageCheck, Star, Truck } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { OrderButton } from "@/components/OrderButton";
+import { ProductOrderPanel } from "@/components/ProductOrderPanel";
 import { formatMoney, product } from "@/lib/product";
 
 export default function Home() {
@@ -56,7 +57,7 @@ export default function Home() {
             <ul className="mt-6 grid gap-3 sm:grid-cols-2">
               {product.benefits.map((benefit) => <li key={benefit} className="flex items-center gap-2 text-sm font-medium text-slate-700"><CheckCircle2 className="h-4 w-4 text-brand-green" />{benefit}</li>)}
             </ul>
-            <div className="mt-7"><OrderButton>Buy Now</OrderButton></div>
+            <ProductOrderPanel />
           </div>
         </div>
       </section>
