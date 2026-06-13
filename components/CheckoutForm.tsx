@@ -46,7 +46,7 @@ function CheckoutFormInner() {
       const response = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Order submission failed.");
-      router.push(`/thank-you?product=${encodeURIComponent(order.productName)}&quantity=${order.quantity}&total=${order.totalPrice}`);
+      router.push(`/thanks?product=${encodeURIComponent(order.productName)}&quantity=${order.quantity}&total=${order.totalPrice}`);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Order submission failed.");
       setIsSubmitting(false);
