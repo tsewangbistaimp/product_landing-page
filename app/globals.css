@@ -28,3 +28,67 @@ textarea {
     radial-gradient(circle at 88% 5%, rgba(23, 86, 51, 0.12), transparent 22%),
     linear-gradient(180deg, #fbfdf9 0%, #eef7f1 100%);
 }
+
+.flodesk-shell [data-ff-el="root"].ff-6a2b9acffa661184558e3528 .ff-6a2b9acffa661184558e3528__container {
+  background: transparent;
+}
+
+.flodesk-shell [data-ff-el="root"].ff-6a2b9acffa661184558e3528 .ff-6a2b9acffa661184558e3528__wrapper {
+  max-width: none;
+}
+
+.flodesk-shell [data-ff-el="root"].ff-6a2b9acffa661184558e3528 .ff-6a2b9acffa661184558e3528__form {
+  border-radius: 8px;
+  color: #17221c;
+}
+
+.flodesk-shell [data-ff-el="root"].ff-6a2b9acffa661184558e3528 .ff-6a2b9acffa661184558e3528__title {
+  color: #17221c;
+  font-family: inherit;
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.05;
+}
+
+.flodesk-shell [data-ff-el="root"].ff-6a2b9acffa661184558e3528 .ff-6a2b9acffa661184558e3528__subtitle {
+  color: #475569;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.flodesk-shell [data-ff-el="root"].ff-6a2b9acffa661184558e3528 .ff-6a2b9acffa661184558e3528__control {
+  border-color: rgba(23, 86, 51, 0.18);
+  border-radius: 8px;
+  color: #17221c;
+  min-height: 54px;
+}
+
+.flodesk-shell [data-ff-el="root"].ff-6a2b9acffa661184558e3528 .ff-6a2b9acffa661184558e3528__control:focus {
+  border-color: #175633;
+  box-shadow: 0 0 0 4px rgba(23, 86, 51, 0.12);
+}
+
+.flodesk-shell [data-ff-el="root"].ff-6a2b9acffa661184558e3528 .ff-6a2b9acffa661184558e3528__label {
+  color: #64748b;
+}
+
+.flodesk-shell [data-ff-el="root"].ff-6a2b9acffa661184558e3528 .ff-6a2b9acffa661184558e3528__button {
+  background: #175633;
+  border-radius: 8px;
+  color: #ffffff;
+  min-height: 54px;
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.flodesk-shell [data-ff-el="root"].ff-6a2b9acffa661184558e3528 .ff-6a2b9acffa661184558e3528__button:hover {
+  background: #104227;
+  transform: translateY(-1px);
+}
+
+.flodesk-shell [data-ff-el="root"].ff-6a2b9acffa661184558e3528 .ff-6a2b9acffa661184558e3528__success-message {
+  color: #175633;
+  font-family: inherit;
+  font-weight: 800;
+}

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { CheckCircle2, Headphones, PackageCheck, ShieldCheck, Star, Truck } from "lucide-react";
+import { FlodeskForm } from "@/components/FlodeskForm";
 import { Logo } from "@/components/Logo";
 import { OrderButton } from "@/components/OrderButton";
 import { ProductOrderPanel } from "@/components/ProductOrderPanel";
@@ -161,6 +162,27 @@ export default function Home() {
               </details>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section id="flodesk-form" className="bg-white py-16 sm:py-20">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-start lg:px-8">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-wide text-brand-orange">Get updates first</p>
+            <h2 className="mt-3 text-3xl font-black text-brand-ink sm:text-5xl">
+              Join the list for offers and new arrivals
+            </h2>
+            <p className="mt-4 leading-8 text-slate-700">
+              Fill the form and Flodesk will safely save your details. After Flodesk confirms the submission, you will be redirected to the thank-you page.
+            </p>
+            <div className="mt-6 grid gap-3">
+              <Trust icon={<CheckCircle2 className="h-5 w-5" />} label="Real Flodesk form" />
+              <Trust icon={<ShieldCheck className="h-5 w-5" />} label="Automation preserved" />
+              <Trust icon={<PackageCheck className="h-5 w-5" />} label="Redirects after success" />
+            </div>
+          </div>
+
+          <FlodeskForm />
         </div>
       </section>
 
