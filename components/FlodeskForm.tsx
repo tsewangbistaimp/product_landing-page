@@ -23,6 +23,11 @@ export function FlodeskForm() {
       oldScript.replaceWith(script);
     }
 
+    const submitLabel = container.querySelector('[data-ff-el="submit"] [data-draw-element="editable"]');
+    if (submitLabel) {
+      submitLabel.textContent = "Book Free Class";
+    }
+
     const root = container.querySelector('[data-ff-el="root"]');
     let redirectTimer: ReturnType<typeof setTimeout> | undefined;
 
