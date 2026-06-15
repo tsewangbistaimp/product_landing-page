@@ -94,11 +94,20 @@ export function SpinAndWinPopup() {
     }
   }
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-brand-ink/55 px-4 py-6 backdrop-blur-sm">
-      <div className="relative max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-lg border border-white/40 bg-[#fbfdf9] shadow-2xl">
+    <>
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-5 right-4 z-40 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-brand-orange px-5 py-3 text-sm font-black text-white shadow-2xl transition hover:bg-[#c95833] sm:bottom-6 sm:right-6"
+      >
+        <Gift className="h-4 w-4" />
+        {discount ? `${discount.percent}% OFF Applied` : "Spin & Win"}
+      </button>
+
+      {!isOpen ? null : (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-brand-ink/55 px-4 py-6 backdrop-blur-sm">
+          <div className="relative max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-lg border border-white/40 bg-[#fbfdf9] shadow-2xl">
         <button
           type="button"
           onClick={() => setIsOpen(false)}
@@ -212,8 +221,10 @@ export function SpinAndWinPopup() {
             )}
           </div>
         </div>
-      </div>
-    </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
