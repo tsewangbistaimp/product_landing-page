@@ -3,6 +3,8 @@ import { CheckCircle2, MessageCircle, PlayCircle } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { formatMoney, product } from "@/lib/product";
 
+const whatsappLink = "https://wa.me/message/4U7NWL7WURAXH1";
+
 export default async function ThanksPage({
   searchParams
 }: {
@@ -29,6 +31,16 @@ export default async function ThanksPage({
           Before your order confirmation, please watch this short video so you know what to do next.
         </p>
 
+        <a
+          href={whatsappLink}
+          target="_blank"
+          rel="noreferrer"
+          className="mx-auto mt-6 inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-md bg-brand-green px-6 py-3 text-sm font-bold text-white shadow-soft transition hover:bg-brand-green/90 sm:w-auto"
+        >
+          <MessageCircle className="h-4 w-4" />
+          Chat with me on WhatsApp
+        </a>
+
         <div className="mt-8 overflow-hidden rounded-lg border border-brand-green/10 bg-brand-mint shadow-sm">
           <div className="grid aspect-video place-items-center px-5 text-brand-green">
             <div>
@@ -54,10 +66,10 @@ export default async function ThanksPage({
 
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <a
-            href="https://wa.me/message/4U7NWL7WURAXH1"
+            href={whatsappLink}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-brand-green px-6 py-3 text-sm font-bold text-white transition hover:bg-brand-green/90"
+            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-brand-green px-6 py-3 text-sm font-bold text-white transition hover:bg-brand-green/90 sm:w-auto"
           >
             <MessageCircle className="h-4 w-4" />
             Chat with me on WhatsApp
