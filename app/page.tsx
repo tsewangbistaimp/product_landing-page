@@ -4,11 +4,13 @@ import { FlodeskForm } from "@/components/FlodeskForm";
 import { Logo } from "@/components/Logo";
 import { OrderButton } from "@/components/OrderButton";
 import { ProductOrderPanel } from "@/components/ProductOrderPanel";
+import { SpinAndWinPopup } from "@/components/SpinAndWinPopup";
 import { formatMoney, product } from "@/lib/product";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#fbfdf9] text-brand-ink">
+      <SpinAndWinPopup />
       <header className="mx-auto max-w-6xl px-4 pb-4 pt-6 sm:px-6 lg:px-8">
         <Logo />
       </header>

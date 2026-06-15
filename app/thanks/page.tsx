@@ -14,6 +14,10 @@ export default async function ThanksPage({
   const productName = String(params.product || product.name);
   const quantity = String(params.quantity || "1");
   const total = Number(params.total || product.offerPrice);
+  const originalTotal = Number(params.originalTotal || total);
+  const discountAmount = Number(params.discountAmount || 0);
+  const discountPercent = Number(params.discountPercent || 0);
+  const discountCode = String(params.discountCode || "");
 
   return (
     <main className="min-h-screen bg-[#fbfdf9] px-4 py-8 text-brand-ink sm:px-6 lg:px-8">
@@ -56,7 +60,10 @@ export default async function ThanksPage({
         <div className="mt-8 grid gap-3 rounded-lg bg-[#fbfdf9] p-5 text-left sm:grid-cols-2">
           <Summary label="Product ordered" value={productName} />
           <Summary label="Quantity" value={quantity} />
+          <Summary label="Original total" value={formatMoney(originalTotal)} />
+          {discountAmount > 0 ? <Summary label={`Spin discount (${discountPercent}% OFF)`} value={`-${formatMoney(discountAmount)}`} /> : null}
           <Summary label="Total transaction" value={formatMoney(total)} />
+          {discountCode ? <Summary label="Discount code" value={discountCode} /> : null}
           <Summary label="Payment method" value="Cash On Delivery" />
         </div>
 

@@ -1,13 +1,49 @@
 "use client";
 
 import { Minus, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatMoney, product } from "@/lib/product";
 import { OrderButton } from "./OrderButton";
 
+type SavedDiscount = {
+  code: string;
+  percent: number;
+  label: string;
+};
+
+const discountStorageKey = "tb_spin_discount";
+
 export function ProductOrderPanel() {
   const [quantity, setQuantity] = useState(1);
-  const total = useMemo(() => quantity * product.offerPrice + product.deliveryFee, [quantity]);
+  const [discount, setDiscount] = useState<SavedDiscount | null>(null);
+  const pricing = useMemo(() => {
+    const originalTotal = quantity * product.offerPrice + product.deliveryFee;
+    const discountAmount = discount ? Math.min(originalTotal, Math.round((quantity * product.offerPrice * discount.percent) / 100)) : 0;
+    return {
+      originalTotal,
+      discountAmount,
+      finalTotal: originalTotal - discountAmount
+    };
+  }, [discount, quantity]);
+
+  useEffect(() => {
+    function readDiscount() {
+      try {
+        const saved = window.localStorage.getItem(discountStorageKey);
+        setDiscount(saved ? (JSON.parse(saved) as SavedDiscount) : null);
+      } catch {
+        setDiscount(null);
+      }
+    }
+
+    readDiscount();
+    window.addEventListener("spin-discount-applied", readDiscount);
+    window.addEventListener("storage", readDiscount);
+    return () => {
+      window.removeEventListener("spin-discount-applied", readDiscount);
+      window.removeEventListener("storage", readDiscount);
+    };
+  }, []);
 
   function updateQuantity(value: number) {
     if (!Number.isFinite(value)) return;
@@ -47,13 +83,25 @@ export function ProductOrderPanel() {
 
         <div className="text-left sm:text-right">
           <p className="text-sm text-slate-600">Total transaction</p>
-          <p className="text-3xl font-bold text-brand-green">{formatMoney(total)}</p>
+          {discount ? (
+            <div>
+              <p className="text-sm text-slate-500 line-through">{formatMoney(pricing.originalTotal)}</p>
+              <p className="text-3xl font-bold text-brand-green">{formatMoney(pricing.finalTotal)}</p>
+              <p className="text-xs font-bold text-brand-orange">
+                {discount.percent}% OFF saved {formatMoney(pricing.discountAmount)}
+              </p>
+            </div>
+          ) : (
+            <p className="text-3xl font-bold text-brand-green">{formatMoney(pricing.finalTotal)}</p>
+          )}
         </div>
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <OrderButton quantity={quantity}>Buy Now</OrderButton>
-        <OrderButton quantity={quantity} className="bg-brand-orange hover:bg-[#c95833]">
+        <OrderButton quantity={quantity} discount={discount}>
+          Buy Now
+        </OrderButton>
+        <OrderButton quantity={quantity} discount={discount} className="bg-brand-orange hover:bg-[#c95833]">
           Order {quantity} Pair{quantity > 1 ? "s" : ""}
         </OrderButton>
       </div>

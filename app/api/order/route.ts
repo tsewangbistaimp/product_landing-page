@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { orderSchema, saveOrderToGoogleSheet, sendOrderEmails } from "@/lib/order";
-import { product } from "@/lib/product";
+import { orderSchema, saveOrderToGoogleSheet, sendOrderEmails, validateOrderPricing } from "@/lib/order";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,9 +7,8 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     const order = orderSchema.parse(await request.json());
-    const expectedTotal = order.quantity * product.offerPrice + product.deliveryFee;
 
-    if (order.productName !== product.name || order.pricePerPiece !== product.offerPrice || order.totalPrice !== expectedTotal) {
+    if (!(await validateOrderPricing(order))) {
       return NextResponse.json({ error: "Order pricing does not match the product offer." }, { status: 400 });
     }
 

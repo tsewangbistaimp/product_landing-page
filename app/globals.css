@@ -92,3 +92,36 @@ textarea {
   font-family: inherit;
   font-weight: 800;
 }
+
+.spin-wheel {
+  background:
+    conic-gradient(
+      from -36deg,
+      #f7efe6 0deg 72deg,
+      #d8eadf 72deg 144deg,
+      #ffffff 144deg 216deg,
+      #f5c5af 216deg 288deg,
+      #e8f3ec 288deg 360deg
+    );
+}
+
+.confetti-piece {
+  top: -16px;
+  animation: confetti-fall 1.8s ease-in-out infinite;
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(0) rotate(0deg);
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(440px) rotate(260deg);
+  }
+}

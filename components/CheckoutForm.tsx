@@ -5,6 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useMemo, useState } from "react";
 import { formatMoney, product } from "@/lib/product";
 
+type CheckoutDiscount = {
+  code: string;
+  percent: number;
+  shoeSize?: string;
+};
+
+const discountStorageKey = "tb_spin_discount";
+
 function CheckoutFormInner() {
   const params = useSearchParams();
   const router = useRouter();
@@ -15,14 +23,38 @@ function CheckoutFormInner() {
     return Math.min(product.maxQuantity, Math.max(1, Number.isFinite(requestedQuantity) ? requestedQuantity : 1));
   }, [params]);
   const [quantity, setQuantity] = useState(initialQuantity);
+  const discount = useMemo<CheckoutDiscount | null>(() => {
+    const queryCode = params.get("discountCode");
+    const queryPercent = Number(params.get("discountPercent") || 0);
+    if (queryCode && queryPercent) {
+      return { code: queryCode, percent: queryPercent };
+    }
+
+    if (typeof window === "undefined") return null;
+
+    try {
+      const saved = window.localStorage.getItem(discountStorageKey);
+      if (!saved) return null;
+      const parsed = JSON.parse(saved) as CheckoutDiscount;
+      return parsed?.code && parsed?.percent ? parsed : null;
+    } catch {
+      return null;
+    }
+  }, [params]);
   const order = useMemo(() => {
+    const originalTotal = quantity * product.offerPrice + product.deliveryFee;
+    const discountAmount = discount ? Math.min(originalTotal, Math.round((quantity * product.offerPrice * discount.percent) / 100)) : 0;
     return {
       productName: params.get("product") || product.name,
       quantity,
       pricePerPiece: product.offerPrice,
-      totalPrice: quantity * product.offerPrice + product.deliveryFee
+      originalTotal,
+      discountPercent: discount?.percent || 0,
+      discountCode: discount?.code || "",
+      discountAmount,
+      totalPrice: originalTotal - discountAmount
     };
-  }, [params, quantity]);
+  }, [discount, params, quantity]);
 
   function updateQuantity(value: number) {
     if (!Number.isFinite(value)) return;
@@ -40,13 +72,23 @@ function CheckoutFormInner() {
       phone: String(formData.get("phone") || ""),
       email: String(formData.get("email") || ""),
       location: String(formData.get("location") || ""),
+      shoeSize: discount?.shoeSize || "",
       ...order
     };
     try {
       const response = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Order submission failed.");
-      router.push(`/thanks?product=${encodeURIComponent(order.productName)}&quantity=${order.quantity}&total=${order.totalPrice}`);
+      const thanksParams = new URLSearchParams({
+        product: order.productName,
+        quantity: String(order.quantity),
+        total: String(order.totalPrice),
+        originalTotal: String(order.originalTotal),
+        discountAmount: String(order.discountAmount),
+        discountPercent: String(order.discountPercent),
+        discountCode: order.discountCode
+      });
+      router.push(`/thanks?${thanksParams.toString()}`);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Order submission failed.");
       setIsSubmitting(false);
@@ -75,7 +117,10 @@ function CheckoutFormInner() {
         <Summary label="Product Name" value={order.productName} />
         <Summary label="Quantity" value={String(order.quantity)} />
         <Summary label="Price Per Piece" value={formatMoney(order.pricePerPiece)} />
+        <Summary label="Original Total" value={formatMoney(order.originalTotal)} />
+        {discount ? <Summary label={`Spin Discount (${order.discountPercent}% OFF)`} value={`-${formatMoney(order.discountAmount)}`} /> : null}
         <Summary label="Total Transaction" value={formatMoney(order.totalPrice)} />
+        {discount ? <Summary label="Discount Code" value={order.discountCode} /> : null}
       </div>
       {error ? <p className="rounded-md bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p> : null}
       <button disabled={isSubmitting} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-brand-green px-6 py-3 text-sm font-semibold text-white disabled:opacity-70">
