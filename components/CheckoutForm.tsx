@@ -2,7 +2,7 @@
 
 import { Loader2, Minus, Plus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useMemo, useState } from "react";
+import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { formatMoney, product } from "@/lib/product";
 
 type CheckoutDiscount = {
@@ -18,10 +18,24 @@ function CheckoutFormInner() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [discountRefreshKey, setDiscountRefreshKey] = useState(0);
   const initialQuantity = useMemo(() => {
     const requestedQuantity = Number(params.get("quantity") || 1);
     return Math.min(product.maxQuantity, Math.max(1, Number.isFinite(requestedQuantity) ? requestedQuantity : 1));
-  }, [params]);
+  }, [discountRefreshKey, params]);
+
+  useEffect(() => {
+    function refreshDiscount() {
+      setDiscountRefreshKey((key) => key + 1);
+    }
+
+    window.addEventListener("spin-discount-applied", refreshDiscount);
+    window.addEventListener("storage", refreshDiscount);
+    return () => {
+      window.removeEventListener("spin-discount-applied", refreshDiscount);
+      window.removeEventListener("storage", refreshDiscount);
+    };
+  }, []);
   const [quantity, setQuantity] = useState(initialQuantity);
   const discount = useMemo<CheckoutDiscount | null>(() => {
     const queryCode = params.get("discountCode");
@@ -78,7 +92,20 @@ function CheckoutFormInner() {
     try {
       const response = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Order submission failed.");
+      if (!response.ok) {
+        if (order.discountCode && typeof data.error === "string" && data.error.toLowerCase().includes("pricing")) {
+          window.localStorage.removeItem(discountStorageKey);
+          window.dispatchEvent(new CustomEvent("spin-discount-applied"));
+          setDiscountRefreshKey((key) => key + 1);
+          const cleanParams = new URLSearchParams(params.toString());
+          cleanParams.delete("discountCode");
+          cleanParams.delete("discountPercent");
+          router.replace(`/checkout?${cleanParams.toString()}`);
+          throw new Error("Your Spin & Win discount is no longer valid, so it was removed. Please submit again with normal pricing.");
+        }
+
+        throw new Error(data.error || "Order submission failed.");
+      }
       if (order.discountCode) {
         window.localStorage.removeItem(discountStorageKey);
         window.dispatchEvent(new CustomEvent("spin-discount-applied"));

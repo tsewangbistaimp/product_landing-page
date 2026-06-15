@@ -65,13 +65,22 @@ export function SpinAndWinPopup() {
     }
 
     function updateCountdown() {
-      setCountdown(formatCountdown(cooldownUntil));
+      const nextCountdown = formatCountdown(cooldownUntil);
+      setCountdown(nextCountdown);
+
+      if (!nextCountdown && discount) {
+        window.localStorage.removeItem(storageKey);
+        window.dispatchEvent(new CustomEvent("spin-discount-applied"));
+        setDiscount(null);
+        setCooldownUntil("");
+        setError("");
+      }
     }
 
     updateCountdown();
     const timer = window.setInterval(updateCountdown, 1000);
     return () => window.clearInterval(timer);
-  }, [cooldownUntil]);
+  }, [cooldownUntil, discount]);
 
   async function handleSpin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
