@@ -53,14 +53,15 @@ export default async function ThanksPage({
         </p>
 
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <button
-            type="button"
-            disabled
-            className="inline-flex min-h-12 cursor-not-allowed items-center justify-center gap-2 rounded-md bg-brand-green px-6 py-3 text-sm font-bold text-white opacity-70"
+          <a
+            href="https://wa.me/message/4U7NWL7WURAXH1"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-brand-green px-6 py-3 text-sm font-bold text-white transition hover:bg-brand-green/90"
           >
             <MessageCircle className="h-4 w-4" />
             Chat with me on WhatsApp
-          </button>
+          </a>
           <Link
             href="/"
             className="inline-flex min-h-12 items-center justify-center rounded-md border border-brand-green/20 bg-white px-6 py-3 text-sm font-bold text-brand-green transition hover:border-brand-green"
