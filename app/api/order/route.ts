@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { markSpinDiscountUsed } from "@/lib/discount";
 import { orderSchema, saveOrderToGoogleSheet, sendOrderEmails, validateOrderPricing } from "@/lib/order";
 
 export const runtime = "nodejs";
@@ -24,6 +25,15 @@ export async function POST(request: Request) {
     } catch (error) {
       console.error("Order email notification failed", error);
       return NextResponse.json({ error: "Order submission failed while sending email notifications. Please contact support." }, { status: 500 });
+    }
+
+    if (order.discountCode) {
+      try {
+        await markSpinDiscountUsed(order.discountCode);
+      } catch (error) {
+        console.error("Spin discount mark-used failed", error);
+        return NextResponse.json({ error: "Order saved, but discount usage could not be finalized. Please contact support." }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ ok: true });

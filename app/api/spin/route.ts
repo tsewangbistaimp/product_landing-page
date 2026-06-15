@@ -7,12 +7,26 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     const spinInput = spinRequestSchema.parse(await request.json());
-    const { record, isDuplicate } = await createSpinDiscount(spinInput);
+    const { record, isDuplicate, cooldownUntil } = await createSpinDiscount(spinInput);
+
+    if (!record) {
+      return NextResponse.json(
+        {
+          ok: false,
+          isDuplicate,
+          cooldownUntil,
+          error: `You already used Spin & Win recently. You can spin again after ${new Date(cooldownUntil || Date.now()).toLocaleString()}.`
+        },
+        { status: 429 }
+      );
+    }
+
     const pricing = calculateDiscountPricing(1, record.discountPercent);
 
     return NextResponse.json({
       ok: true,
       isDuplicate,
+      cooldownUntil,
       discount: {
         code: record.code,
         percent: record.discountPercent,
@@ -20,7 +34,9 @@ export async function POST(request: Request) {
         shoeSize: record.shoeSize,
         originalTotal: pricing.originalTotal,
         discountAmount: pricing.discountAmount,
-        finalTotal: pricing.finalTotal
+        finalTotal: pricing.finalTotal,
+        status: record.status,
+        nextEligibleAt: record.nextEligibleAt
       }
     });
   } catch (error) {

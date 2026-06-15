@@ -79,6 +79,11 @@ function CheckoutFormInner() {
       const response = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Order submission failed.");
+      if (order.discountCode) {
+        window.localStorage.removeItem(discountStorageKey);
+        window.dispatchEvent(new CustomEvent("spin-discount-applied"));
+        trackDiscountOrder(order.discountCode, order.discountPercent, order.discountAmount, order.totalPrice);
+      }
       const thanksParams = new URLSearchParams({
         product: order.productName,
         quantity: String(order.quantity),
@@ -132,6 +137,18 @@ function CheckoutFormInner() {
 
 function Summary({ label, value }: { label: string; value: string }) {
   return <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p><p className="mt-1 font-bold text-brand-ink">{value}</p></div>;
+}
+
+function trackDiscountOrder(discountCode: string, discountPercent: number, discountAmount: number, totalPrice: number) {
+  const fbq = (window as Window & { fbq?: (...args: unknown[]) => void }).fbq;
+  if (!fbq) return;
+
+  fbq("trackCustom", "SpinDiscountOrderCompleted", {
+    discount_code: discountCode,
+    discount_percent: discountPercent,
+    discount_amount: discountAmount,
+    final_price: totalPrice
+  });
 }
 
 export function CheckoutForm() {

@@ -166,6 +166,7 @@ export async function validateOrderPricing(order: OrderPayload) {
   if (order.discountCode) {
     const spinRecord = await findSpinByCode(order.discountCode);
     if (!spinRecord) return false;
+    if (spinRecord.status !== "active") return false;
     if (spinRecord.email.toLowerCase() !== order.email.toLowerCase()) return false;
     if (spinRecord.whatsapp.replace(/[^\d+]/g, "") !== order.phone.replace(/[^\d+]/g, "")) return false;
     verifiedDiscountPercent = spinRecord.discountPercent;

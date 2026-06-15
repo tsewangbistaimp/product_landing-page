@@ -16,12 +16,15 @@ type SpinDiscount = {
   originalTotal: number;
   discountAmount: number;
   finalTotal: number;
+  status?: string;
+  nextEligibleAt?: string;
 };
 
 type SpinResponse = {
   ok: boolean;
   isDuplicate: boolean;
-  discount: SpinDiscount;
+  discount?: SpinDiscount;
+  cooldownUntil?: string;
   error?: string;
 };
 
@@ -30,6 +33,8 @@ export function SpinAndWinPopup() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [error, setError] = useState("");
   const [discount, setDiscount] = useState<SpinDiscount | null>(null);
+  const [cooldownUntil, setCooldownUntil] = useState("");
+  const [countdown, setCountdown] = useState("");
   const [rotation, setRotation] = useState(0);
   const delayMs = useMemo(() => Number(process.env.NEXT_PUBLIC_SPIN_DELAY_MS || 2500), []);
 
@@ -37,6 +42,7 @@ export function SpinAndWinPopup() {
     const savedDiscount = readSavedDiscount();
     if (savedDiscount) {
       setDiscount(savedDiscount);
+      setCooldownUntil(savedDiscount.nextEligibleAt || "");
       return;
     }
 
@@ -51,6 +57,21 @@ export function SpinAndWinPopup() {
       document.removeEventListener("mouseleave", handleExitIntent);
     };
   }, [delayMs]);
+
+  useEffect(() => {
+    if (!cooldownUntil) {
+      setCountdown("");
+      return;
+    }
+
+    function updateCountdown() {
+      setCountdown(formatCountdown(cooldownUntil));
+    }
+
+    updateCountdown();
+    const timer = window.setInterval(updateCountdown, 1000);
+    return () => window.clearInterval(timer);
+  }, [cooldownUntil]);
 
   async function handleSpin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,16 +97,23 @@ export function SpinAndWinPopup() {
         body: JSON.stringify(payload)
       });
       const data = (await response.json()) as SpinResponse;
-      if (!response.ok) throw new Error(data.error || "Please check your details and try again.");
+      if (!response.ok) {
+        if (data.cooldownUntil) setCooldownUntil(data.cooldownUntil);
+        throw new Error(data.error || "Please check your details and try again.");
+      }
+      if (!data.discount) throw new Error("Spin failed. Please try again.");
+      const wonDiscount = data.discount;
 
-      const prizeIndex = Math.max(0, prizeOrder.indexOf(data.discount.percent));
+      const prizeIndex = Math.max(0, prizeOrder.indexOf(wonDiscount.percent));
       const segmentCenter = prizeIndex * 72 + 36;
       setRotation(360 * 5 + (360 - segmentCenter));
 
       window.setTimeout(() => {
-        setDiscount(data.discount);
-        window.localStorage.setItem(storageKey, JSON.stringify(data.discount));
-        window.dispatchEvent(new CustomEvent("spin-discount-applied", { detail: data.discount }));
+        setDiscount(wonDiscount);
+        setCooldownUntil(wonDiscount.nextEligibleAt || data.cooldownUntil || "");
+        window.localStorage.setItem(storageKey, JSON.stringify(wonDiscount));
+        window.dispatchEvent(new CustomEvent("spin-discount-applied", { detail: wonDiscount }));
+        trackSpinWin(wonDiscount);
         setIsSpinning(false);
       }, 2600);
     } catch (spinError) {
@@ -163,6 +191,11 @@ export function SpinAndWinPopup() {
                 </div>
                 <p className="mt-6 text-sm font-bold uppercase tracking-wide text-brand-orange">Your discount is applied</p>
                 <h3 className="mt-2 text-4xl font-black text-brand-ink">{discount.label}</h3>
+                {countdown ? (
+                  <p className="mt-3 rounded-md bg-white px-4 py-3 text-sm font-bold text-brand-green">
+                    Next Spin & Win available in {countdown}
+                  </p>
+                ) : null}
                 <div className="mt-6 grid gap-3 rounded-lg bg-brand-mint p-5">
                   <Summary label="Original price" value={formatMoney(discount.originalTotal)} />
                   <Summary label="Discount amount" value={`-${formatMoney(discount.discountAmount)}`} />
@@ -185,6 +218,11 @@ export function SpinAndWinPopup() {
                   <p className="mt-3 leading-7 text-slate-700">
                     One spin is allowed per email and WhatsApp number. The winning result is generated securely on the server.
                   </p>
+                  {countdown ? (
+                    <p className="mt-3 rounded-md bg-brand-mint px-4 py-3 text-sm font-bold text-brand-green">
+                      You can spin again in {countdown}.
+                    </p>
+                  ) : null}
                 </div>
 
                 <input name="fullName" required minLength={2} placeholder="Full Name" className="rounded-md border border-brand-green/20 px-4 py-3 outline-none focus:border-brand-green" />
@@ -264,4 +302,28 @@ function readSavedDiscount(): SpinDiscount | null {
   } catch {
     return null;
   }
+}
+
+function formatCountdown(targetIso: string) {
+  const remainingMs = new Date(targetIso).getTime() - Date.now();
+  if (!Number.isFinite(remainingMs) || remainingMs <= 0) return "";
+
+  const totalSeconds = Math.ceil(remainingMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${hours}h ${minutes}m ${seconds}s`;
+}
+
+function trackSpinWin(discount: SpinDiscount) {
+  const fbq = (window as Window & { fbq?: (...args: unknown[]) => void }).fbq;
+  if (!fbq) return;
+
+  fbq("trackCustom", "SpinWinDiscount", {
+    discount_code: discount.code,
+    discount_percent: discount.percent,
+    shoe_size: discount.shoeSize,
+    final_price: discount.finalTotal
+  });
 }

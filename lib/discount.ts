@@ -8,6 +8,7 @@ export const discountPercents = [10, 20, 50, 75, 100] as const;
 
 const spinSheetName = "SpinDiscounts";
 const flodeskFormAction = "https://form.flodesk.com/forms/6a2b9acffa661184558e3528/submit";
+const cooldownMs = 24 * 60 * 60 * 1000;
 
 export const spinRequestSchema = z.object({
   fullName: z.string().trim().min(2, "Full name is required."),
@@ -23,6 +24,23 @@ export type SpinRecord = SpinRequest & {
   discountPercent: number;
   createdAt: string;
   status: string;
+  usedAt: string;
+  lastAttemptAt: string;
+  nextEligibleAt: string;
+};
+
+export type SpinAttempt = {
+  createdAt: string;
+  code: string;
+  fullName: string;
+  email: string;
+  whatsapp: string;
+  shoeSize: string;
+  discountPercent: number;
+  status: string;
+  usedAt: string;
+  lastAttemptAt: string;
+  nextEligibleAt: string;
 };
 
 export type DiscountPricing = {
@@ -79,12 +97,24 @@ async function ensureSpinSheetReady(sheets: ReturnType<typeof google.sheets>, sp
     });
   }
 
-  const headerRange = `${spinSheetName}!A1:H1`;
-  const expectedHeader = ["Created At", "Discount Code", "Full Name", "Email", "WhatsApp", "Shoe Size", "Won Discount Percent", "Status"];
+  const headerRange = `${spinSheetName}!A1:K1`;
+  const expectedHeader = [
+    "Created At",
+    "Discount Code",
+    "Full Name",
+    "Email",
+    "WhatsApp",
+    "Shoe Size",
+    "Won Discount Percent",
+    "Status",
+    "Used At",
+    "Last Attempt At",
+    "Next Eligible At"
+  ];
   const header = await sheets.spreadsheets.values.get({ spreadsheetId, range: headerRange });
   const currentHeader = header.data.values?.[0] || [];
 
-  if (!header.data.values?.length || currentHeader[1] !== "Discount Code") {
+  if (!header.data.values?.length || currentHeader[10] !== "Next Eligible At") {
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: headerRange,
@@ -94,20 +124,41 @@ async function ensureSpinSheetReady(sheets: ReturnType<typeof google.sheets>, sp
   }
 }
 
-function rowToSpinRecord(row: string[]): SpinRecord | null {
-  const [createdAt, code, fullName, email, whatsapp, shoeSize, discountPercent, status] = row;
-  if (!code || !email || !whatsapp || !shoeSize) return null;
-  if (!shoeSizes.includes(shoeSize as (typeof shoeSizes)[number])) return null;
+function rowToAttempt(row: string[]): SpinAttempt {
+  const [createdAt, code, fullName, email, whatsapp, shoeSize, discountPercent, status, usedAt, lastAttemptAt, nextEligibleAt] = row;
+  const attemptAt = lastAttemptAt || createdAt || new Date().toISOString();
 
   return {
-    createdAt,
-    code,
-    fullName,
-    email,
-    whatsapp,
-    shoeSize: shoeSize as (typeof shoeSizes)[number],
-    discountPercent: Number(discountPercent),
-    status: status || "active"
+    createdAt: createdAt || attemptAt,
+    code: code || "",
+    fullName: fullName || "",
+    email: email || "",
+    whatsapp: whatsapp || "",
+    shoeSize: shoeSize || "",
+    discountPercent: Number(discountPercent || 0),
+    status: status || "",
+    usedAt: usedAt || "",
+    lastAttemptAt: attemptAt,
+    nextEligibleAt: nextEligibleAt || new Date(new Date(attemptAt).getTime() + cooldownMs).toISOString()
+  };
+}
+
+function attemptToSpinRecord(attempt: SpinAttempt): SpinRecord | null {
+  if (!attempt.code || !attempt.email || !attempt.whatsapp || !attempt.shoeSize) return null;
+  if (!shoeSizes.includes(attempt.shoeSize as (typeof shoeSizes)[number])) return null;
+
+  return {
+    createdAt: attempt.createdAt,
+    code: attempt.code,
+    fullName: attempt.fullName,
+    email: attempt.email,
+    whatsapp: attempt.whatsapp,
+    shoeSize: attempt.shoeSize as (typeof shoeSizes)[number],
+    discountPercent: attempt.discountPercent,
+    status: attempt.status || "active",
+    usedAt: attempt.usedAt,
+    lastAttemptAt: attempt.lastAttemptAt,
+    nextEligibleAt: attempt.nextEligibleAt
   };
 }
 
@@ -117,7 +168,7 @@ async function readSpinRows() {
   await ensureSpinSheetReady(sheets, spreadsheetId);
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${spinSheetName}!A2:H`
+    range: `${spinSheetName}!A2:K`
   });
 
   return (response.data.values || []) as string[][];
@@ -125,22 +176,25 @@ async function readSpinRows() {
 
 export async function findSpinByCode(code: string) {
   const rows = await readSpinRows();
-  return rows.map(rowToSpinRecord).find((record) => record?.code === code) || null;
+  return rows.map(rowToAttempt).map(attemptToSpinRecord).find((record) => record?.code === code) || null;
 }
 
-async function findExistingSpin(email: string, whatsapp: string) {
+async function findRecentSpinAttempts(email: string, whatsapp: string) {
   const normalizedInputEmail = normalizeEmail(email);
   const normalizedInputPhone = normalizePhone(whatsapp);
+  const now = Date.now();
   const rows = await readSpinRows();
 
-  return (
-    rows
-      .map(rowToSpinRecord)
-      .find((record) => {
-        if (!record) return false;
-        return normalizeEmail(record.email) === normalizedInputEmail || normalizePhone(record.whatsapp) === normalizedInputPhone;
-      }) || null
-  );
+  return rows
+    .map(rowToAttempt)
+    .filter((attempt) => {
+      if (!attempt.email || !attempt.whatsapp) return false;
+      return normalizeEmail(attempt.email) === normalizedInputEmail || normalizePhone(attempt.whatsapp) === normalizedInputPhone;
+    })
+    .filter((attempt) => {
+      const nextEligibleTime = new Date(attempt.nextEligibleAt).getTime();
+      return Number.isFinite(nextEligibleTime) && nextEligibleTime > now;
+    });
 }
 
 function drawDiscountPercent() {
@@ -167,36 +221,95 @@ export function calculateDiscountPricing(quantity: number, discountPercent = 0):
 }
 
 export async function createSpinDiscount(input: SpinRequest) {
-  const existing = await findExistingSpin(input.email, input.whatsapp);
-  if (existing) {
-    return { record: existing, isDuplicate: true };
+  const recentAttempts = await findRecentSpinAttempts(input.email, input.whatsapp);
+  if (recentAttempts.length) {
+    const cooldownUntil = recentAttempts
+      .map((attempt) => attempt.nextEligibleAt)
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+    await recordSpinAttempt(input, "cooldown_denied", cooldownUntil);
+    return { record: null, isDuplicate: true, cooldownUntil };
   }
 
   const spreadsheetId = requireEnv("GOOGLE_SHEET_ID");
   const sheets = getSheetsClient();
   await ensureSpinSheetReady(sheets, spreadsheetId);
 
+  const now = new Date().toISOString();
   const discountPercent = drawDiscountPercent();
   const record: SpinRecord = {
     ...input,
     code: createDiscountCode(discountPercent),
     discountPercent,
-    createdAt: new Date().toISOString(),
-    status: "active"
+    createdAt: now,
+    status: "active",
+    usedAt: "",
+    lastAttemptAt: now,
+    nextEligibleAt: new Date(Date.now() + cooldownMs).toISOString()
   };
 
   await sheets.spreadsheets.values.append({
     spreadsheetId,
-    range: `${spinSheetName}!A:H`,
+    range: `${spinSheetName}!A:K`,
     valueInputOption: "USER_ENTERED",
     requestBody: {
-      values: [[record.createdAt, record.code, record.fullName, record.email, record.whatsapp, record.shoeSize, record.discountPercent, record.status]]
+      values: [[
+        record.createdAt,
+        record.code,
+        record.fullName,
+        record.email,
+        record.whatsapp,
+        record.shoeSize,
+        record.discountPercent,
+        record.status,
+        record.usedAt,
+        record.lastAttemptAt,
+        record.nextEligibleAt
+      ]]
     }
   });
 
   await syncSpinLeadToFlodesk(record);
 
-  return { record, isDuplicate: false };
+  return { record, isDuplicate: false, cooldownUntil: record.nextEligibleAt };
+}
+
+async function recordSpinAttempt(input: SpinRequest, status: string, nextEligibleAt: string) {
+  const spreadsheetId = requireEnv("GOOGLE_SHEET_ID");
+  const sheets = getSheetsClient();
+  await ensureSpinSheetReady(sheets, spreadsheetId);
+  const now = new Date().toISOString();
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range: `${spinSheetName}!A:K`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: [[now, "", input.fullName, input.email, input.whatsapp, input.shoeSize, 0, status, "", now, nextEligibleAt]]
+    }
+  });
+}
+
+export async function markSpinDiscountUsed(code: string) {
+  if (!code) return;
+
+  const spreadsheetId = requireEnv("GOOGLE_SHEET_ID");
+  const sheets = getSheetsClient();
+  await ensureSpinSheetReady(sheets, spreadsheetId);
+  const rows = await readSpinRows();
+  const rowIndex = rows.findIndex((row) => row[1] === code);
+  if (rowIndex < 0) return;
+
+  const sheetRowNumber = rowIndex + 2;
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      valueInputOption: "USER_ENTERED",
+      data: [
+        { range: `${spinSheetName}!H${sheetRowNumber}`, values: [["used"]] },
+        { range: `${spinSheetName}!I${sheetRowNumber}`, values: [[new Date().toISOString()]] }
+      ]
+    }
+  });
 }
 
 async function syncSpinLeadToFlodesk(record: SpinRecord) {
